@@ -2,7 +2,7 @@ import {
   listUnembeddedChunks,
   updateChunkEmbedding,
 } from "@/server/services/chunks";
-import { VoyageClient, VOYAGE_BATCH_SIZE } from "@/lib/voyage";
+import { EMBED_BATCH_SIZE, embedDocuments } from "@/lib/embeddings";
 
 /**
  * Embed every chunk in a repo that doesn't already have an embedding.
@@ -24,14 +24,13 @@ export async function embedRepoChunks(
   const pending = await listUnembeddedChunks(repoId);
   if (pending.length === 0) return { embedded: 0 };
 
-  const voyage = VoyageClient.fromEnv();
   let done = 0;
-  for (let i = 0; i < pending.length; i += VOYAGE_BATCH_SIZE) {
-    const batch = pending.slice(i, i + VOYAGE_BATCH_SIZE);
+  for (let i = 0; i < pending.length; i += EMBED_BATCH_SIZE) {
+    const batch = pending.slice(i, i + EMBED_BATCH_SIZE);
     const inputs = batch.map((c) => c.content);
-    const vectors = await voyage.embedDocuments(inputs);
+    const vectors = await embedDocuments(inputs);
 
-    // Write back. Parallel writes are safe — each row is independent.
+    // Parallel writes are safe — each row is independent.
     await Promise.all(
       batch.map((chunk, idx) => updateChunkEmbedding(chunk.id, vectors[idx])),
     );

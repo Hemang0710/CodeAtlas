@@ -1,18 +1,19 @@
 import { z } from "zod";
 
-import { VoyageClient } from "@/lib/voyage";
+import { expandHits } from "@/server/retrieval/expand";
+import { hybridSearch } from "@/server/retrieval/hybrid";
 import { getRepoById } from "@/server/services/repos";
-import { vectorSearch } from "@/server/retrieval/vector";
 
 /**
- * POST /api/repos/:id/search — semantic search over a repo's chunks.
+ * POST /api/repos/:id/search — hybrid (vector + keyword) semantic search.
  *
- * Body: { query: string, k?: number }
- * Response: { hits: VectorHit[] }
+ * Body: { query: string, k?: number, expand?: boolean }
+ * Response: { hits: HybridHit[] (+ optional expanded) }
  *
- * This is the "ask the codebase" surface. Phase 5 will swap it for the
- * full Q&A agent; today it's a clean ranked list so we can validate the
- * embedding pipeline end-to-end.
+ * `expand: true` pads the primary RRF results with sibling chunks (same
+ * file) and 1-hop graph neighbours. Useful as context for the Q&A agent
+ * landing in Phase 5; the UI defaults to expanded=false to keep results
+ * compact.
  */
 
 const idSchema = z.string().uuid();
@@ -20,6 +21,7 @@ const idSchema = z.string().uuid();
 const bodySchema = z.object({
   query: z.string().min(1).max(2000),
   k: z.number().int().min(1).max(50).optional(),
+  expand: z.boolean().optional(),
 });
 
 export async function POST(
@@ -51,49 +53,52 @@ export async function POST(
     return Response.json({ error: "Repo not found." }, { status: 404 });
   }
 
-  if (!process.env.VOYAGE_API_KEY) {
+  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
     return Response.json(
       {
         error:
-          "Search is unavailable: VOYAGE_API_KEY is not set on the server. See TODO.md step 6.",
+          "Search is unavailable: GOOGLE_GENERATIVE_AI_API_KEY is not set on the server.",
       },
       { status: 503 },
     );
   }
 
-  let queryEmbedding: number[];
   try {
-    const voyage = VoyageClient.fromEnv();
-    queryEmbedding = await voyage.embedQuery(parsed.data.query);
+    const primary = await hybridSearch({
+      repoId: repo.id,
+      query: parsed.data.query,
+      topK: parsed.data.k ?? 10,
+    });
+
+    const hits = parsed.data.expand
+      ? await expandHits({ repoId: repo.id, hits: primary, perHit: 2 })
+      : primary;
+
+    return Response.json({
+      repo: { id: repo.id, name: repo.name },
+      hits: hits.map((h) => ({
+        chunkId: h.chunkId,
+        fileId: h.fileId,
+        filePath: h.filePath,
+        symbolName: h.symbolName,
+        symbolType: h.symbolType,
+        startLine: h.startLine,
+        endLine: h.endLine,
+        // Trim long chunks for the wire; the agent can fetch the full file
+        // via read_file in Phase 5.
+        content:
+          h.content.length > 1200 ? h.content.slice(0, 1200) + "…" : h.content,
+        score: h.score,
+        source: h.source,
+        vectorRank: h.vectorRank ?? null,
+        keywordRank: h.keywordRank ?? null,
+      })),
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return Response.json(
-      { error: `Could not embed query: ${message}` },
+      { error: `Search failed: ${message}` },
       { status: 502 },
     );
   }
-
-  const hits = await vectorSearch({
-    repoId: repo.id,
-    queryEmbedding,
-    k: parsed.data.k ?? 10,
-  });
-
-  return Response.json({
-    repo: { id: repo.id, name: repo.name },
-    hits: hits.map((h) => ({
-      chunkId: h.chunkId,
-      fileId: h.fileId,
-      filePath: h.filePath,
-      symbolName: h.symbolName,
-      symbolType: h.symbolType,
-      startLine: h.startLine,
-      endLine: h.endLine,
-      // Trim long chunks for the wire — the UI only previews the first ~600
-      // chars. Phase 5's tool calls fetch full content via read_file.
-      content:
-        h.content.length > 1200 ? h.content.slice(0, 1200) + "…" : h.content,
-      score: h.score,
-    })),
-  });
 }

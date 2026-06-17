@@ -15,6 +15,27 @@
       "when": 1781321600000,
       "tag": "0001_hnsw_index",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781408000000,
+      "tag": "0002_tsvector",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1781585219946,
+      "tag": "0003_conversations",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1781634730256,
+      "tag": "0004_onboarding_guide",
+      "breakpoints": true
     }
   ]
 }

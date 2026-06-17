@@ -19,6 +19,7 @@ import {
   markRepoFailed,
   markRepoIndexing,
   markRepoReady,
+  setRepoDefaultBranch,
 } from "@/server/services/repos";
 
 import { chunkFile, type ChunkPart } from "./chunk";
@@ -73,6 +74,11 @@ export async function ingestRepo(input: {
     }
     if (meta.archived) {
       console.log(`[ingest] note: ${parsed.name} is archived on GitHub`);
+    }
+    // Persist the real default branch so Phase 5's read_file tool hits
+    // raw.githubusercontent.com/<owner>/<repo>/<actual-branch>/...
+    if (meta.defaultBranch) {
+      await setRepoDefaultBranch(repoId, meta.defaultBranch);
     }
   } catch (err) {
     if (err instanceof RepoNotFoundError) {
@@ -253,7 +259,7 @@ export async function ingestRepo(input: {
 
     // ---- Embed unembedded chunks ----------------------------------------
     let embedded = 0;
-    if (process.env.VOYAGE_API_KEY) {
+    if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
       await updateJob(jobId, { status: "embedding", progress: 80 });
       const embedResult = await embedRepoChunks(repoId, {
         onProgress: async (done, total) => {
@@ -264,11 +270,10 @@ export async function ingestRepo(input: {
       });
       embedded = embedResult.embedded;
     } else {
-      // No key? We still finish the job successfully — Phase 3 search just
-      // won't return semantic hits until the user sets VOYAGE_API_KEY and
-      // re-indexes (or we add a "re-embed" button later).
+      // No key? We still finish the job successfully — search just won't
+      // return semantic hits until the user sets the key and re-indexes.
       console.warn(
-        "[ingest] VOYAGE_API_KEY not set — skipping embedding step. " +
+        "[ingest] GOOGLE_GENERATIVE_AI_API_KEY not set — skipping embedding step. " +
           "Set it in .env.local and re-index to enable semantic search.",
       );
     }

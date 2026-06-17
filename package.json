@@ -13,15 +13,21 @@
     "worker": "dotenv -e .env.local -- tsx watch src/server/queue/worker.ts",
     "db:generate": "dotenv -e .env.local -- drizzle-kit generate",
     "db:migrate": "dotenv -e .env.local -- tsx scripts/migrate.ts",
-    "db:studio": "dotenv -e .env.local -- drizzle-kit studio"
+    "db:studio": "dotenv -e .env.local -- drizzle-kit studio",
+    "mcp": "dotenv -e .env.local -- tsx src/mcp/server.ts"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.83",
+    "@ai-sdk/react": "^3.0.208",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "ai": "^6.0.206",
     "bullmq": "^5.78.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",
     "ignore": "^7.0.5",
     "lucide-react": "^1.17.0",
+    "mermaid": "^11.15.0",
     "next": "16.2.9",
     "postgres": "^3.4.9",
     "react": "19.2.4",

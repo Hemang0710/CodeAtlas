@@ -1,5 +1,12 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+# internal developer / AI-assistant docs — consumers of this repo don't need them
+CLAUDE.md
+TODO.md
+DEPLOY.md
+AGENTS.md
+docs/
+
 # dependencies
 /node_modules
 /.pnp

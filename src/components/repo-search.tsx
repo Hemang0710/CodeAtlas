@@ -24,6 +24,9 @@ interface Hit {
   endLine: number;
   content: string;
   score: number;
+  source?: "vector" | "keyword" | "both" | "expanded";
+  vectorRank?: number | null;
+  keywordRank?: number | null;
 }
 
 export function RepoSearch({ repoId }: { repoId: string }) {
@@ -106,6 +109,11 @@ function HitCard({ hit }: { hit: Hit }) {
             {hit.symbolName ?? "(module)"}
           </span>
           <Badge variant="default">{hit.symbolType}</Badge>
+          {hit.source && hit.source !== "expanded" && (
+            <Badge variant={hit.source === "both" ? "ready" : "queued"}>
+              {hit.source}
+            </Badge>
+          )}
         </div>
         <span className="text-xs text-zinc-500">
           score {hit.score.toFixed(3)}

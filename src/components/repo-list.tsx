@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { Trash2 } from "lucide-react";
 
 import { RepoForm } from "@/components/repo-form";
@@ -89,7 +89,9 @@ export function RepoList({ initial }: { initial: RepoRow[] }) {
 
   return (
     <div className="space-y-8">
-      <RepoForm onCreated={refresh} />
+      <Suspense fallback={<div className="h-10" />}>
+        <RepoForm onCreated={refresh} />
+      </Suspense>
 
       {repos.length === 0 ? (
         <p className="rounded-lg border border-dashed border-zinc-300 p-8 text-center text-sm text-zinc-500 dark:border-zinc-700">

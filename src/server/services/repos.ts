@@ -100,6 +100,39 @@ export async function markRepoIndexing(id: string): Promise<void> {
     .where(eq(repos.id, id));
 }
 
+/**
+ * Set the repo's default branch from GitHub metadata. Called during ingest
+ * pre-flight so the agent's `read_file` tool hits the right raw URL.
+ */
+export async function setRepoDefaultBranch(
+  id: string,
+  defaultBranch: string,
+): Promise<void> {
+  await db
+    .update(repos)
+    .set({ defaultBranch, updatedAt: sql`now()` })
+    .where(eq(repos.id, id));
+}
+
+/**
+ * Persist the generated onboarding guide. Phase 6 calls this after the
+ * one-shot agent run completes; the page reads from this column directly
+ * so renders don't pay for the LLM call.
+ */
+export async function setRepoOnboardingGuide(
+  id: string,
+  markdown: string,
+): Promise<void> {
+  await db
+    .update(repos)
+    .set({
+      onboardingGuide: markdown,
+      onboardingGuideGeneratedAt: sql`now()`,
+      updatedAt: sql`now()`,
+    })
+    .where(eq(repos.id, id));
+}
+
 export async function markRepoReady(id: string): Promise<void> {
   await db
     .update(repos)

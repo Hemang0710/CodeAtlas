@@ -6,14 +6,24 @@ import * as schema from "./schema";
 /**
  * Singleton postgres-js client + Drizzle wrapper.
  *
- * Why a singleton: in Next.js dev mode the module graph is reloaded on every
- * change, which would leak connections without this guard. We stash the
- * client on `globalThis` so HMR reuses it.
+ * We initialise lazily (on first property access) for two reasons:
  *
- * In the worker process there's no HMR, but caching here is still cheap.
+ *   1. HMR in `next dev` reloads modules; binding the client to globalThis
+ *      lets us survive a reload without leaking connections.
+ *   2. Unit tests can import modules that transitively touch `db` without
+ *      needing a running database. Tests never *call* `.select()` etc.,
+ *      so the underlying client never gets constructed.
+ *
+ * Supabase's pooled (pgbouncer transaction-mode) connection disallows
+ * prepared statements, hence `prepare: false`.
  */
+
+type PgClient = ReturnType<typeof postgres>;
+type Db = ReturnType<typeof drizzle<typeof schema>>;
+
 const globalForDb = globalThis as unknown as {
-  __codeatlasPg?: ReturnType<typeof postgres>;
+  __codeatlasPg?: PgClient;
+  __codeatlasDb?: Db;
 };
 
 function getConnectionString(): string {
@@ -26,19 +36,38 @@ function getConnectionString(): string {
   return url;
 }
 
-function createClient() {
-  // Supabase's pooled connection (pgbouncer transaction mode) disallows
-  // prepared statements; postgres-js needs `prepare: false` to play nice.
-  return postgres(getConnectionString(), {
-    max: 10,
-    prepare: false,
-  });
+function getClient(): PgClient {
+  if (!globalForDb.__codeatlasPg) {
+    globalForDb.__codeatlasPg = postgres(getConnectionString(), {
+      max: 10,
+      prepare: false,
+    });
+  }
+  return globalForDb.__codeatlasPg;
 }
 
-const client = globalForDb.__codeatlasPg ?? createClient();
-if (process.env.NODE_ENV !== "production") {
-  globalForDb.__codeatlasPg = client;
+function getDb(): Db {
+  if (!globalForDb.__codeatlasDb) {
+    globalForDb.__codeatlasDb = drizzle(getClient(), { schema });
+  }
+  return globalForDb.__codeatlasDb;
 }
 
-export const db = drizzle(client, { schema });
+/**
+ * Lazy facade around the real Drizzle instance. The Proxy means
+ * `import { db } from "@/server/db/client"` is a free operation; the
+ * Postgres connection only opens the first time someone calls a real
+ * method like `db.select()`.
+ *
+ * Method binding is preserved via `.bind(actual)` so chained query
+ * builders keep their `this` reference.
+ */
+export const db = new Proxy({} as Db, {
+  get(_target, prop) {
+    const actual = getDb() as unknown as Record<string | symbol, unknown>;
+    const value = actual[prop];
+    return typeof value === "function" ? (value as (...args: unknown[]) => unknown).bind(actual) : value;
+  },
+});
+
 export { schema };

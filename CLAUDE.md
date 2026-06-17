@@ -24,11 +24,17 @@ comments and in your replies.
   allowed only inside Drizzle migration files (e.g. enabling pgvector, HNSW index)
 - **BullMQ + Redis (Docker locally)** — background indexing jobs
 - **web-tree-sitter (WASM grammars)** — AST parsing for semantic chunking
-- **Voyage AI `voyage-code-3` (1024 dims)** — code embeddings.
-  Fallback provider: OpenAI `text-embedding-3-small`. Verify current model
-  names in official docs before wiring up.
-- **Anthropic Claude (`claude-sonnet-4-6`) via Vercel AI SDK** — Q&A agent
-  with tool use and streaming
+- **Google Gemini `gemini-embedding-001` (1024 dims, Matryoshka)** — code
+  embeddings, via `@ai-sdk/google`. Same Google AI Studio API key powers
+  embeddings AND the agent — single env var for the whole product. We
+  request 1024 dims to match the pgvector column. `taskType` switches
+  between `RETRIEVAL_DOCUMENT` (corpus) and `CODE_RETRIEVAL_QUERY`
+  (search query).
+- **Google Gemini (`gemini-2.5-flash`) via Vercel AI SDK** (`@ai-sdk/google`)
+  — Q&A agent with tool use and streaming. Free tier on Google AI Studio,
+  no credit card required. Earlier phases used Anthropic Claude; the
+  Vercel AI SDK abstracts the provider so the rest of the agent code is
+  identical. Swap providers via `AGENT_MODEL_ID` in `src/server/agent/answer.ts`.
 - **simple-git** for cloning, **ignore** package for .gitignore handling
 - **Tailwind CSS + shadcn/ui** — styling
 - **Zod** — validate ALL external input (API bodies, queue payloads, LLM tool args)
@@ -143,10 +149,8 @@ drizzle/              # generated migrations
 ## Environment variables (.env.example)
 
 ```
-DATABASE_URL=            # Supabase Postgres connection string (use the pooled URL)
-REDIS_URL=redis://localhost:6379
-ANTHROPIC_API_KEY=
-VOYAGE_API_KEY=          # embeddings
-OPENAI_API_KEY=          # optional fallback embeddings
-GITHUB_TOKEN=            # optional: higher clone/API rate limits
+DATABASE_URL=                     # Supabase Postgres connection string (use the pooled URL)
+REDIS_URL=
+GOOGLE_GENERATIVE_AI_API_KEY=     # Gemini: powers BOTH the agent AND embeddings (free, no card)
+GITHUB_TOKEN=                     # optional: higher clone/API rate limits
 ```
