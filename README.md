@@ -149,7 +149,6 @@ Three free-tier services, ~45 minutes total:
 | Postgres + pgvector | Supabase |
 | Redis + worker | Railway |
 
-See **[DEPLOY.md](DEPLOY.md)** for the full step-by-step runbook, including how to wire the MCP server to Claude Desktop.
 
 ---
 
