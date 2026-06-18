@@ -19,7 +19,10 @@ CodeAtlas indexes a GitHub repo, maps every file and symbol into a vector databa
 | **Import graph** | Traces dependency edges; ask what would break if you changed a file |
 | **Architecture diagrams** | Auto-generated Mermaid graphs of file-level import relationships |
 | **Onboarding guide** | AI-written plain-English summary of entry points, key abstractions, and how to run it |
+| **PR review** | Paste a PR URL; the agent traces the blast radius of each changed file and writes a cited review |
+| **Auto re-index** | A GitHub webhook re-indexes a repo on every push to its default branch (only changed files re-embed) |
 | **MCP server** | Exposes all tools as an MCP server — query repos directly from Claude Desktop |
+| **VS Code extension** | Ask the codebase from inside the editor; click `file:line` citations to jump to the code (`extension/`) |
 
 ---
 
@@ -173,6 +176,24 @@ Restart Claude Desktop. You can now ask Claude:
 - *"List my CodeAtlas repos."*
 - *"Search the vercel/next.js repo for where routing is handled."*
 - *"What imports auth/session.ts in the colinhacks/zod repo?"*
+
+---
+
+## VS Code extension
+
+A thin client lives in [`extension/`](extension/README.md). It talks to the
+`POST /api/repos/:id/ask` endpoint (a plain-text stream) so you can ask the
+indexed codebase questions without leaving the editor — and click any
+`file:line` citation to open that file at that line.
+
+```bash
+cd extension
+npm install
+npm run compile     # then press F5 in VS Code to launch the dev host
+```
+
+Set `codeatlas.serverUrl` (default `http://localhost:3000`), then run
+**CodeAtlas: Select indexed repository** to choose which repo to query.
 
 ---
 

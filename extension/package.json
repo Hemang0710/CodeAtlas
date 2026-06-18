@@ -1,0 +1,75 @@
+{
+  "name": "codeatlas-vscode",
+  "displayName": "CodeAtlas",
+  "description": "Ask your indexed GitHub repositories questions from inside VS Code — answers with file:line citations you can click to jump to.",
+  "version": "0.1.0",
+  "publisher": "codeatlas",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Machine Learning",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "ai",
+    "codebase",
+    "search",
+    "rag",
+    "code-q-and-a"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codeatlas.openChat",
+        "title": "CodeAtlas: Ask the codebase",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "codeatlas.askAboutSelection",
+        "title": "CodeAtlas: Ask about selection"
+      },
+      {
+        "command": "codeatlas.selectRepo",
+        "title": "CodeAtlas: Select indexed repository"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "codeatlas.askAboutSelection",
+          "when": "editorHasSelection",
+          "group": "navigation@9"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "CodeAtlas",
+      "properties": {
+        "codeatlas.serverUrl": {
+          "type": "string",
+          "default": "http://localhost:3000",
+          "description": "Base URL of your running CodeAtlas server (the Next.js app)."
+        },
+        "codeatlas.repoId": {
+          "type": "string",
+          "default": "",
+          "description": "UUID of the indexed repository to query. Run 'CodeAtlas: Select indexed repository' to set this from a list."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.0"
+  }
+}

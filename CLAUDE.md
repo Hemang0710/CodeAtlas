@@ -153,4 +153,5 @@ DATABASE_URL=                     # Supabase Postgres connection string (use the
 REDIS_URL=
 GOOGLE_GENERATIVE_AI_API_KEY=     # Gemini: powers BOTH the agent AND embeddings (free, no card)
 GITHUB_TOKEN=                     # optional: higher clone/API rate limits
+GITHUB_WEBHOOK_SECRET=            # optional: enables POST /api/webhooks/github auto-reindex
 ```

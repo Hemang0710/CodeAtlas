@@ -1,8 +1,7 @@
 import { z } from "zod";
 
 import { githubUrlSchema } from "@/lib/github";
-import { enqueueIndexRepo } from "@/server/queue/queues";
-import { createJob } from "@/server/services/jobs";
+import { startRepoIndexing } from "@/server/services/indexing";
 import { listRepos, upsertRepoByUrl } from "@/server/services/repos";
 
 /**
@@ -36,18 +35,15 @@ export async function POST(request: Request): Promise<Response> {
   // 1) Upsert the repo row by URL (re-submitting the same URL reuses the id).
   const repo = await upsertRepoByUrl(parsed.data.githubUrl);
 
-  // 2) Create a fresh index_job row so the UI can poll its progress.
-  const job = await createJob(repo.id);
-
-  // 3) Enqueue. From here the worker takes over.
-  await enqueueIndexRepo({
-    repoId: repo.id,
-    jobId: job.id,
-    githubUrl: parsed.data.githubUrl.normalizedUrl,
+  // 2) Create the job + enqueue. From here the worker takes over. Shared with
+  //    the webhook path so both triggers index identically.
+  const { jobId } = await startRepoIndexing({
+    id: repo.id,
+    githubUrl: repo.githubUrl,
   });
 
   return Response.json(
-    { repo: { id: repo.id, name: repo.name, status: repo.status }, jobId: job.id },
+    { repo: { id: repo.id, name: repo.name, status: repo.status }, jobId },
     { status: 201 },
   );
 }

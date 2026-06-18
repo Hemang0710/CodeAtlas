@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The VS Code extension is a self-contained sub-project with its own
+    // toolchain (CommonJS, Node target). Keep the app's ESLint out of it.
+    "extension/**",
   ]),
 ]);
 

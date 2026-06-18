@@ -48,6 +48,34 @@ export async function getRepoById(id: string): Promise<Repo | null> {
   return row ?? null;
 }
 
+/**
+ * Look up a repo by its canonical github_url. Used by the webhook handler to
+ * find the indexed repo a push event belongs to. Pass the normalized URL
+ * (`https://github.com/owner/repo`) — that's what we store.
+ */
+export async function findRepoByNormalizedUrl(
+  normalizedUrl: string,
+): Promise<Repo | null> {
+  const [row] = await db
+    .select()
+    .from(repos)
+    .where(eq(repos.githubUrl, normalizedUrl))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * Reset a repo to `queued` ahead of a re-index. Keeps the homepage badge
+ * honest in the window between enqueue and the worker calling
+ * `markRepoIndexing`.
+ */
+export async function markRepoQueued(id: string): Promise<void> {
+  await db
+    .update(repos)
+    .set({ status: "queued", updatedAt: sql`now()` })
+    .where(eq(repos.id, id));
+}
+
 export async function deleteRepo(id: string): Promise<boolean> {
   // ON DELETE CASCADE on files / index_jobs / chunks / file_edges takes care
   // of dependents — this single DELETE removes everything.
