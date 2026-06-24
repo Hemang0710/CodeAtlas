@@ -100,7 +100,7 @@ drizzle/              # generated migrations
   start_line, end_line, content, embedding vector(1024), tsv (generated tsvector)
 - `file_edges` — source_file_id, target_file_id, edge_type (imports)
 
-## Conventions
+## Conventions 
 
 - TypeScript strict; never use `any` — use `unknown` + narrowing
 - Services pattern: business logic in `src/server/**`, never in components or

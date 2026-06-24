@@ -13,6 +13,7 @@ const ITEMS: { key: string; label: string; href: (id: string) => string }[] = [
     label: "Architecture",
     href: (id) => `/repos/${id}/architecture`,
   },
+  { key: "impact", label: "Impact", href: (id) => `/repos/${id}/impact` },
   { key: "guide", label: "Onboarding", href: (id) => `/repos/${id}/guide` },
   {
     key: "pr-review",
@@ -26,7 +27,7 @@ export function RepoNav({
   active,
 }: {
   repoId: string;
-  active: "chat" | "architecture" | "guide" | "pr-review";
+  active: "chat" | "architecture" | "impact" | "guide" | "pr-review";
 }) {
   return (
     <nav className="flex gap-1 border-b border-zinc-200 dark:border-zinc-800">

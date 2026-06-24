@@ -1,13 +1,19 @@
 @import "tailwindcss";
 
-/* Light-mode design tokens. Dark mode is handled below via the
- * `prefers-color-scheme` query — we'll switch to a class-based toggle when
- * we add a theme switcher in Phase 6. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #0a0a0a;
   --muted: #6b7280;
   --border: #e5e7eb;
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+  --muted: #a1a1aa;
+  --border: #27272a;
 }
 
 @theme inline {
@@ -19,15 +25,15 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #fafafa;
-    --muted: #a1a1aa;
-    --border: #27272a;
-  }
-}
-
 body {
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+}
+
+@keyframes slide-in-from-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.animate-in.slide-in-from-right {
+  animation: slide-in-from-right 0.2s ease-out;
 }

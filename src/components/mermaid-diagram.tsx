@@ -1,20 +1,8 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { Download } from "lucide-react";
 
-/**
- * Render a Mermaid diagram from a source string.
- *
- * We import mermaid lazily (dynamic import inside useEffect) for two reasons:
- *   1. It's a heavy package (~700 KB) — keeping it out of the initial
- *      bundle until the user actually views a diagram pays for itself.
- *   2. It touches `window`, so SSR would throw. Lazy + client-only sidesteps.
- *
- * On parse error we show the raw source in a `<pre>` so the user (and the
- * LLM during diff inspection) can see what actually arrived. Important:
- * the AI sometimes emits malformed Mermaid; we don't want that to crash
- * the whole chat turn.
- */
 export function MermaidDiagram({
   source,
   className = "",
@@ -24,7 +12,8 @@ export function MermaidDiagram({
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const id = useId().replace(/:/g, "_"); // CSS-id-safe
+  const [rendered, setRendered] = useState(false);
+  const id = useId().replace(/:/g, "_");
 
   useEffect(() => {
     let cancelled = false;
@@ -32,8 +21,6 @@ export function MermaidDiagram({
       try {
         const mermaidModule = await import("mermaid");
         const mermaid = mermaidModule.default;
-        // Initialise once per render. `initialize` is idempotent enough
-        // that we don't need to remember whether we've called it.
         mermaid.initialize({
           startOnLoad: false,
           theme: "default",
@@ -46,16 +33,60 @@ export function MermaidDiagram({
         if (containerRef.current) {
           containerRef.current.innerHTML = svg;
           setError(null);
+          setRendered(true);
         }
       } catch (err) {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : String(err));
+        setRendered(false);
       }
     })();
     return () => {
       cancelled = true;
     };
   }, [source, id]);
+
+  const downloadSvg = useCallback(() => {
+    if (!containerRef.current) return;
+    const svg = containerRef.current.querySelector("svg");
+    if (!svg) return;
+    const blob = new Blob([svg.outerHTML], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "architecture.svg";
+    a.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const downloadPng = useCallback(() => {
+    if (!containerRef.current) return;
+    const svg = containerRef.current.querySelector("svg");
+    if (!svg) return;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = img.width * 2;
+      canvas.height = img.height * 2;
+      ctx.scale(2, 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "architecture.png";
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+    };
+    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+  }, []);
 
   if (error) {
     return (
@@ -79,9 +110,31 @@ export function MermaidDiagram({
   }
 
   return (
-    <div
-      ref={containerRef}
-      className={`overflow-x-auto rounded-md border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950 ${className}`}
-    />
+    <div className={`relative ${className}`}>
+      {rendered && (
+        <div className="absolute right-2 top-2 z-10 flex gap-1">
+          <button
+            onClick={downloadSvg}
+            className="flex items-center gap-1 rounded-md border border-zinc-200 bg-white/90 px-2 py-1 text-xs text-zinc-600 backdrop-blur-sm hover:bg-zinc-50 hover:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900/90 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
+            title="Download as SVG"
+          >
+            <Download className="h-3 w-3" />
+            SVG
+          </button>
+          <button
+            onClick={downloadPng}
+            className="flex items-center gap-1 rounded-md border border-zinc-200 bg-white/90 px-2 py-1 text-xs text-zinc-600 backdrop-blur-sm hover:bg-zinc-50 hover:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900/90 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
+            title="Download as PNG"
+          >
+            <Download className="h-3 w-3" />
+            PNG
+          </button>
+        </div>
+      )}
+      <div
+        ref={containerRef}
+        className="overflow-x-auto rounded-md border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
+      />
+    </div>
   );
 }

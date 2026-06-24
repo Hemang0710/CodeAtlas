@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useChat } from "@ai-sdk/react";
-import { Loader2, MessageSquare, Sparkles, Wrench } from "lucide-react";
+import { Check, Copy, Loader2, MessageSquare, Sparkles, Wrench } from "lucide-react";
 
 import { MermaidDiagram } from "@/components/mermaid-diagram";
 import { Badge } from "@/components/ui/badge";
@@ -205,18 +205,14 @@ function PartRenderer({ part }: { part: UIMessage["parts"][number] }) {
           )}
         </div>
         {input !== undefined && (
-          <pre className="overflow-x-auto rounded bg-zinc-100 p-2 font-mono text-xs text-zinc-700 dark:bg-zinc-950 dark:text-zinc-300">
-            {JSON.stringify(input, null, 2)}
-          </pre>
+          <CopyablePre content={JSON.stringify(input, null, 2)} />
         )}
         {output !== undefined && state === "output-available" && (
           <details className="mt-2">
             <summary className="cursor-pointer text-xs text-zinc-500">
               result
             </summary>
-            <pre className="mt-1 max-h-64 overflow-auto rounded bg-zinc-100 p-2 font-mono text-xs text-zinc-700 dark:bg-zinc-950 dark:text-zinc-300">
-              {JSON.stringify(output, null, 2)}
-            </pre>
+            <CopyablePre content={JSON.stringify(output, null, 2)} className="mt-1 max-h-64 overflow-auto" />
           </details>
         )}
       </div>
@@ -231,6 +227,29 @@ function PartRenderer({ part }: { part: UIMessage["parts"][number] }) {
  * promise of this product, so we make them visually distinct.
  */
 const CITATION_RE = /([a-zA-Z0-9_./-]+\.[a-zA-Z]{1,6}):(\d+)(?:-(\d+))?/g;
+
+function CopyablePre({ content, className = "" }: { content: string; className?: string }) {
+  const [copied, setCopied] = useState(false);
+  async function handleCopy() {
+    await navigator.clipboard.writeText(content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+  return (
+    <div className={`group relative ${className}`}>
+      <button
+        onClick={handleCopy}
+        className="absolute right-2 top-2 rounded border border-zinc-200 bg-white/80 p-1 text-zinc-500 opacity-0 transition-opacity hover:text-zinc-900 group-hover:opacity-100 dark:border-zinc-700 dark:bg-zinc-900/80 dark:hover:text-zinc-100"
+        aria-label="Copy code"
+      >
+        {copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+      </button>
+      <pre className="overflow-x-auto rounded bg-zinc-100 p-2 font-mono text-xs text-zinc-700 dark:bg-zinc-950 dark:text-zinc-300">
+        {content}
+      </pre>
+    </div>
+  );
+}
 
 function renderWithCitations(text: string): React.ReactNode[] {
   const nodes: React.ReactNode[] = [];
